@@ -16,7 +16,8 @@ rank.espn.live.players <- html_text(rank.espn.live.players.html)  ##Parse player
 rank.espn.live.price <- html_text(rank.espn.live.price.html)  ##Parse cost
 rank.espn.live.position <- html_text(rank.espn.live.position.html)[-(1:2)] #Parse positions, dropping some clutter at the start
 rank.espn.live <- as.data.frame(cbind(rank.espn.live.players,rank.espn.live.price, rank.espn.live.position)) ##Combine to one dataframe
-names(rank.espn.live) <- c('player','price','pos') #Rename columns
+names(rank.espn.live) <- c('player','price','prim.pos') #Rename columns
+rank.espn.live$draft <- 1:nrow(rank.espn.live)
 
 keep.list <- c('keep.list','o2s',o2s(rank.espn.live))  ##List for variables to not remove
 rm(list=setdiff(ls(), keep.list))  #Empty work space
@@ -125,7 +126,7 @@ for(i in 1:length(url)){
 
 
 cost.yahoo <- as.data.frame(cbind(cost.yahoo.player,cost.yahoo.value,cost.yahoo.cost))
-names(cost.yahoo) <- c('player','value','cost')
+names(cost.yahoo) <- c('player','value.y','cost.y')
 keep.list <- append(keep.list,o2s(cost.yahoo))  ##List for variables to not remove
 rm(list=setdiff(ls(), keep.list))  #Empty work space
 
@@ -147,13 +148,53 @@ for(i in 1:length(url)){
   tiers.fp.avg.html <- html_nodes(webpage, 'td:nth-child(5)')
   tiers.fp.sd.html <- html_nodes(webpage, 'td:nth-child(6)')
   
-  tiers.fp.player <- html_text(tiers.fp.player.html)[1:fp.tier.size[i]]
-  tiers.fp.avg <- html_text(tiers.fp.avg.html)[1:fp.tier.size[i]]
-  tiers.fp.sd <- html_text(tiers.fp.sd.html)[1:fp.tier.size[i]]
+  tiers.fp.player <- as.character(html_text(tiers.fp.player.html)[1:fp.tier.size[i]])
+  tiers.fp.avg <- as.numeric(as.character(html_text(tiers.fp.avg.html)[1:fp.tier.size[i]]))
+  tiers.fp.sd <- as.numeric(as.character(html_text(tiers.fp.sd.html)[1:fp.tier.size[i]]))
   
-  ff.tier.list[[fp.tiers.postions[i]]] <- as.data.frame(cbind(tiers.fp.player,tiers.fp.avg,tiers.fp.sd))
+  
+  tiers.df.temp <- data.frame(cbind(tiers.fp.player,tiers.fp.avg,tiers.fp.sd), stringsAsFactors = F) ##combines to one DF
+  tiers.df.temp[,2:3] <- sapply(tiers.df.temp[,2:3], as.numeric) ##converts numbersto numeric
+  tiers.df.temp <- tiers.df.temp[complete.cases(tiers.df.temp),] ##complete cases only
+  ff.tier.list[[fp.tiers.postions[i]]] <- tiers.df.temp ##output
 }
 
 
 keep.list <- append(keep.list,o2s(ff.tier.list))  ##List for variables to not remove
 rm(list=setdiff(ls(), keep.list))  #Empty work space
+
+
+
+## cost.yahoo DONE BELOW
+## ff.tier.list DONE IN PULL
+## projection.espn.live DONE
+## rank.espn.live DONE
+## rating.espn.live 
+
+
+##Wrangling to be put in separate file later
+
+cost.yahoo <- as.data.frame(sapply(cost.yahoo, as.character))  ##Convert from Factor to character (factors hard to work with)
+cost.yahoo$value.y <- as.numeric(gsub('\\$', '', cost.yahoo$value.y))
+cost.yahoo$cost.y <- as.numeric(gsub('\\$', '', cost.yahoo$cost.y))
+
+projection.espn.live$player <- as.character(projection.espn.live$player)
+projection.espn.live[,2:9] <- sapply(projection.espn.live[,2:9], function(x){ as.numeric(as.character(x))})
+
+rank.espn.live$player <- as.character(rank.espn.live$player)
+rank.espn.live$price <- as.numeric(as.character(rank.espn.live$price))
+rank.espn.live$prim.pos <- as.character(rank.espn.live$prim.pos)
+
+rating.espn.live <- as.data.frame(sapply(rating.espn.live, as.character), stringsAsFactors = F)
+rating.espn.live[,3:12] <- sapply(rating.espn.live[,3:12], as.numeric)
+
+rating.espn.live$temp <- unlist(regmatches(rating.espn.live$player.long, regexpr(", ", rating.espn.live$player.long), 
+                                           invert = TRUE))[seq(2, nrow(rating.espn.live)*2, by =2)]
+rating.espn.live$temp <- substr(rating.espn.live$temp,4, stop = 1000000)
+
+rating.espn.live$pos.pg <-  grepl('PG', rating.espn.live$temp)
+rating.espn.live$pos.sg <-  grepl('SG', rating.espn.live$temp)
+rating.espn.live$pos.sf <-  grepl('SF', rating.espn.live$temp)
+rating.espn.live$pos.pf <-  grepl('PF', rating.espn.live$temp)
+rating.espn.live$pos.c <-  grepl('C', rating.espn.live$temp)
+
