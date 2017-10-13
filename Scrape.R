@@ -140,7 +140,7 @@ url <- c('https://www.fantasypros.com/nba/rankings/overall',
          'https://www.fantasypros.com/nba/rankings/pf',
          'https://www.fantasypros.com/nba/rankings/c')
 
-ff.tier.list = list()
+fp.tier.list = list()
 
 for(i in 1:length(url)){
   webpage <- read_html(url[i])
@@ -156,17 +156,17 @@ for(i in 1:length(url)){
   tiers.df.temp <- data.frame(cbind(tiers.fp.player,tiers.fp.avg,tiers.fp.sd), stringsAsFactors = F) ##combines to one DF
   tiers.df.temp[,2:3] <- sapply(tiers.df.temp[,2:3], as.numeric) ##converts numbersto numeric
   tiers.df.temp <- tiers.df.temp[complete.cases(tiers.df.temp),] ##complete cases only
-  ff.tier.list[[fp.tiers.postions[i]]] <- tiers.df.temp ##output
+  fp.tier.list[[fp.tiers.postions[i]]] <- tiers.df.temp ##output
 }
 
 
-keep.list <- append(keep.list,o2s(ff.tier.list))  ##List for variables to not remove
+keep.list <- append(keep.list,o2s(fp.tier.list))  ##List for variables to not remove
 rm(list=setdiff(ls(), keep.list))  #Empty work space
 
 
 
 ## cost.yahoo DONE BELOW
-## ff.tier.list DONE IN PULL
+## fp.tier.list DONE IN PULL
 ## projection.espn.live DONE
 ## rank.espn.live DONE
 ## rating.espn.live 
@@ -174,7 +174,7 @@ rm(list=setdiff(ls(), keep.list))  #Empty work space
 
 ##Wrangling to be put in separate file later
 
-cost.yahoo <- as.data.frame(sapply(cost.yahoo, as.character))  ##Convert from Factor to character (factors hard to work with)
+cost.yahoo$player <- as.character(cost.yahoo$player)  ##Convert from Factor to character (factors hard to work with)
 cost.yahoo$value.y <- as.numeric(gsub('\\$', '', cost.yahoo$value.y))
 cost.yahoo$cost.y <- as.numeric(gsub('\\$', '', cost.yahoo$cost.y))
 
@@ -189,12 +189,25 @@ rating.espn.live <- as.data.frame(sapply(rating.espn.live, as.character), string
 rating.espn.live[,3:12] <- sapply(rating.espn.live[,3:12], as.numeric)
 
 rating.espn.live$temp <- unlist(regmatches(rating.espn.live$player.long, regexpr(", ", rating.espn.live$player.long), 
-                                           invert = TRUE))[seq(2, nrow(rating.espn.live)*2, by =2)]
-rating.espn.live$temp <- substr(rating.espn.live$temp,4, stop = 1000000)
+                                           invert = TRUE))[seq(2, nrow(rating.espn.live)*2, by =2)] ## Splits long string after comma
+rating.espn.live$temp <- substr(rating.espn.live$temp,4, stop = 1000000) ##Cuts team name (except h in Utah, but who cares)
 
+## Categorizes each player position
 rating.espn.live$pos.pg <-  grepl('PG', rating.espn.live$temp)
 rating.espn.live$pos.sg <-  grepl('SG', rating.espn.live$temp)
 rating.espn.live$pos.sf <-  grepl('SF', rating.espn.live$temp)
 rating.espn.live$pos.pf <-  grepl('PF', rating.espn.live$temp)
 rating.espn.live$pos.c <-  grepl('C', rating.espn.live$temp)
+rating.espn.live <- subset(rating.espn.live, select = -c(player.long,temp,rank))  ##removes junk
 
+#Convert Yahoo names to ESPN
+y2e <- read.csv('yahoo_to_espn_map.csv')
+cost.yahoo <- merge(cost.yahoo, y2e, all = T, by.x = 'player', by.y = 'name.y')
+cost.yahoo$name.e <- as.character(cost.yahoo$name.e)
+cost.yahoo$player[!is.na(cost.yahoo$name.e)] <- cost.yahoo$name.e[!is.na(cost.yahoo$name.e)]
+cost.yahoo <- subset(cost.yahoo, select = -(name.e))
+
+##Merges data
+fbb.data <- merge.data.frame(projection.espn.live, rating.espn.live, all = T, by.x = 'player', by.y = 'player')
+fbb.data <- merge.data.frame(fbb.data, rank.espn.live,all = T, by.x = 'player', by.y = 'player')
+fbb.data <- merge.data.frame(fbb.data, cost.yahoo,all = T, by.x = 'player', by.y = 'player')
