@@ -29,8 +29,8 @@ fp.tier.list <- lapply(fp.tier.list, clust.k)
 
 
 for(i in 1:length(names(fp.tier.list))){
-
-  if(names(fp.tier.list)[i] == 'Overall') {
+  pos.name <- names(fp.tier.list)[i]
+  if(pos.name == 'Overall') {
 
     ##Overall Plot
     font <- 2.4; barsize <- 1; dotsize <- 0.8; highcolor <- 650;
@@ -51,13 +51,32 @@ for(i in 1:length(names(fp.tier.list))){
     maxy <- max( abs(fp.tier.list$Overall$tiers.fp.avg[1:150])+fp.tier.list$Overall$tiers.fp.sd[1:150]/2) 
     p = p + ylim(-10, maxy)
     
-    DPI = 250
+    DPI = 350
     ggsave(file="predraft-overall.png", width = 14, height = 14, dpi = DPI)
     
   }
   
   else{
     font <- 3; barsize <- 1.25; dotsize <- 1; highcolor <- 450;
+    
+    p <- ggplot(fp.tier.list[[i]][1:70,], aes(x=-rank, y = tiers.fp.avg))
+    p <- p + ggtitle(paste0(pos.name,' Rankings'))
+    p <- p + geom_errorbar(aes(ymin = tiers.fp.avg - tiers.fp.sd/2, ymax = tiers.fp.avg + tiers.fp.sd/2, width=0.2, colour=tiers.c), size=barsize*0.8, alpha=0.4)
+    p <- p + geom_point(colour="grey20", size=dotsize) 
+    p <- p + coord_flip()
+    p <- p + annotate("text", x = Inf, y = -Inf, label = "www.GeorgeRooney.com", hjust=1.1, vjust=-1.1, col="white", cex=6, fontface = "bold", alpha = 0.8)
+    p <- p + geom_text(aes(label=tiers.fp.player, colour=tiers.c, y = tiers.fp.avg - name.length/2 
+                           - tiers.fp.sd/1.8), size=font) 
+    p <- p + scale_x_continuous("Expert Consensus Rank")
+    p <- p + ylab("Average Expert Rank")
+    p <- p + theme(legend.justification=c(1,1), legend.position=c(1,1))
+    p <- p + scale_colour_discrete(name="Tier")
+    p <- p + scale_colour_hue(l=55, h=c(0, highcolor))
+    maxy <- max( abs(fp.tier.list[[i]]$tiers.fp.avg[1:70])+fp.tier.list[[i]]$tiers.fp.sd[1:70]/2) 
+    p = p + ylim(-10, maxy)
+    
+    DPI = 350
+    ggsave(file=paste0('predraft-',pos.name,'.png'), width = 10, height = 8.75, dpi = DPI)
   }
   
   
