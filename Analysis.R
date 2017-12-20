@@ -90,6 +90,15 @@ num.teams <- 16; rost.size <- 12; doll.per <- 200; doll.min <- 1;
 fbb.data$cost.g.o <- (fbb.data$ovr.r/sum(fbb.data$ovr.r[1:(num.teams*rost.size)]))*((doll.per - doll.min)*num.teams)
 fbb.data$cost.g.o[(fbb.data$cost.g.o < 0) | is.na(fbb.data$cost.g.o)] <- 0
 
+w.fg <- 1; w.ft <- 1; w.3pm <- 1; w.reb <- 1; w.ast <- 1; w.stl <- 1; w.blk <- 1; w.pts <- 1;
+weights <- c(w.fg, w.ft, w.3pm, w.reb, w.ast, w.stl, w.blk, w.pts)
+fbb.data$ovr.r.custom <- rowSums(fbb.data[,which(names(fbb.data) == "fg.r"):which(names(fbb.data) == "pts.r")] * weights)
+fbb.data$cost.custom <- fbb.data$ovr.r.custom/sum(fbb.data$ovr.r.custom[1:(num.teams*rost.size)])*((doll.per - doll.min)*num.teams)
+
+
+
+
+
 ##calculate custom ratings based on emphasis
 ga <- c('3pm.r', 'ast.r', 'ft.r') #guard archetype fields
 fa <- c('fg.r', 'reb.r', 'blk.r') #fields archetype fields
@@ -106,4 +115,4 @@ fbb.data[,custom.cost] <- sapply(fbb.data[,custom.ratings], function(x) {
   x/sum(x[1:(num.teams*rost.size)])*((doll.per - doll.min)*num.teams)
 })
 
-
+write.csv(fbb.data,'fbb_output.csv', row.names = F)
